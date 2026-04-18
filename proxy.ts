@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -24,7 +24,7 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   const { pathname } = request.nextUrl
-  const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/verify')
+  const isAuthRoute = pathname.startsWith('/login')
   const isAdminRoute = pathname.startsWith('/admin')
   const isApiRoute = pathname.startsWith('/api')
 
@@ -37,7 +37,6 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
-  // Fetch role from profiles
   const { data: profile } = await supabase
     .from('profiles')
     .select('role')
@@ -45,6 +44,7 @@ export async function middleware(request: NextRequest) {
     .single()
 
   if (!profile) {
+    await supabase.auth.signOut()
     return NextResponse.redirect(new URL('/login?error=no_profile', request.url))
   }
 
